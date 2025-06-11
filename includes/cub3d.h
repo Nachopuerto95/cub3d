@@ -6,7 +6,7 @@
 /*   By: jpuerto <jpuerto@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 08:56:51 by jpuerto           #+#    #+#             */
-/*   Updated: 2025/06/11 08:57:50 by jpuerto          ###   ########.fr       */
+/*   Updated: 2025/06/11 09:34:15 by jpuerto          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,5 +14,14 @@
 # define CUB3D_H
 
 #include <stdio.h>
+#include "../minilibx-linux/mlx.h"
+#include "libft/libft.h"
+
+typedef struct s_game
+{
+    void    *mlx;
+    void    *win;
+    void    *img;
+}           t_game;
 
 #endif

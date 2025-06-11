@@ -1,60 +1,52 @@
-.PHONY: all re clean fclean bonus
+NAME		= cub3D
 
-# Program file name
-NAME	= cub3D
+CC			= cc
+CFLAGS		= -Wall -Wextra -Werror -g
 
-# Compiler and compilation flags
-CC		= cc
-CFLAGS	= -Werror -Wextra -Wall -g3 #-fsanitize=address
+SRC_DIR		= sources
+OBJ_DIR		= objects
+INC_DIR		= includes
 
-# Minilibx
-MLX_PATH	= minilibx-linux/
-MLX_NAME	= libmlx.a
-MLX			= $(MLX_PATH)$(MLX_NAME)
+SRCS		= $(wildcard $(SRC_DIR)/*.c)
+OBJS		= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-# Libft
-LIBFT_PATH	= libft/
-LIBFT_NAME	= libft.a
-LIBFT		= $(LIBFT_PATH)$(LIBFT_NAME)
+LIBFT_DIR	= libft
+LIBFT_A		= $(LIBFT_DIR)/libft.a
 
-# Sources
-SRC_PATH = ./sources/
-SRC		= 	main.c 
-SRCS	= $(addprefix $(SRC_PATH), $(SRC))
+MLX_DIR		= minilibx-linux
+MLX_A		= $(MLX_DIR)/libmlx.a
 
-# Objects
-OBJ_PATH	= ./objects/
-OBJ			= $(SRC:.c=.o)
-OBJS		= $(addprefix $(OBJ_PATH), $(OBJ))
+INCLUDES	= -I$(INC_DIR) -I$(LIBFT_DIR) -I$(MLX_DIR)
 
-# Includes
-INC			=	-I ./includes/\
-				-I ./libft/\
-				-I ./minilibx-linux/
+MLX_FLAGS	= -L$(MLX_DIR) -lmlx -L/usr/X11R6/lib -lXext -lX11 -lm
+LIBFT_FLAGS	= -L$(LIBFT_DIR) -lft
 
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ $(INC) $(LIBFT) $(MLX) -lXext -lX11 -lm
+all: $(NAME)
 
-$(OBJ_PATH)%.o: $(SRC_PATH)%.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(INC)
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-all: $(OBJ_PATH) $(MLX) $(LIBFT) $(NAME)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-# Libft rule
-$(LIBFT):
-	make -sC $(LIBFT_PATH)
+$(LIBFT_A):
+	$(MAKE) -C $(LIBFT_DIR)
 
-# MLX rule
-$(MLX):
-	make -sC $(MLX_PATH)
+$(MLX_A):
+	$(MAKE) -C $(MLX_DIR)
+
+$(NAME): $(LIBFT_A) $(MLX_A) $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) $(LIBFT_A) $(MLX_A) $(MLX_FLAGS) -o $(NAME)
 
 clean:
-	rm -rf $(OBJ_PATH)
-	make -C $(LIBFT_PATH) clean
-	make -C $(MLX_PATH) clean
+	rm -rf $(OBJ_DIR)
+	$(MAKE) -C $(LIBFT_DIR) clean
+	$(MAKE) -C $(MLX_DIR) clean
 
 fclean: clean
 	rm -f $(NAME)
-	make -C $(LIBFT_PATH) fclean
+	$(MAKE) -C $(LIBFT_DIR) fclean
 
 re: fclean all
+
+.PHONY: all clean fclean re

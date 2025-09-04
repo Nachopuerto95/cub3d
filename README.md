@@ -84,4 +84,102 @@ vamos a dividir esta función en las 3 acciones principales que va a llevar a ca
 
 de esta forma primero borraremos lo que pintamos en el anterior frame, recalcularemos lo que tenemos que pintar en el frame actual y lo pintaremos.
 
+para la creación del canvas ya deberíamos tener algo parecido a esto:
+
+```c
+    game->win = mlx_new_window(game->mlx, WIDTH, HEIGHT, "Game");
+    game->img = mlx_new_image(game->mlx, WIDTH, HEIGHT);
+```
+
+de modo que para "limpiar" la pantalla solo debemos hacer un bucle que comience desde `x = 0` e `y = 0` hasta x = WIDTH` e y = `HEIGHT` rellenando cada pixel con el color de fondo, para pintar cada píxle utilizaremos una función parecida a esta, y atentos por que aquí empezamos a ver algunos conceptos importantes:
+
+primero de todo vamos a necesitar las siguientes variables en nuestra estructura game:
+
+`*char data`;
+Es un puntero al inicio del "array" de bytes que representa la imagen completa en memoria. Cada píxel que dibujes modifica este array.
+
+`int bpp`;
+"Bits per pixel" — número de bits que ocupa cada píxel (habitualmente 32 en MiniLibX, es decir, 4 bytes por píxel).
+
+`int size_line`;
+Número de bytes que ocupa una línea completa de la imagen. Esto puede ser un poco mayor que WIDTH * (bpp / 8) por alineamiento de memoria.
+
+`int endian;
+Indica el orden de los bytes en la memoria (little/big endian). Suele ser irrelevante si solo usamos colores básicos y MiniLibX en Linux.
+
+vamos a "iniciar" el addr de nuestra estructura, yo lo hice en la funcion init game que prepara todas las variables antes de los hooks, seguido de una primera impresión de la imagen
+
+```c
+	game->data = mlx_get_data_addr(game->img, &game->bpp, &game->size_line, &game->endian);
+	mlx_put_image_to_window(game->mlx, game->win, game->img, 0, 0);
+```
+
+¿Para qué sirve mlx_put_image...?
+
+Bueno este es el concepto importante al que me refería, en cada frame nosotros vamos a calcular de que color ha de ser cada pixel de la pantalla y lo vamos a guardar en el array data, este array es como una lista de todos los píxeles
+
+- Multiplicamos y * size_line → Saltamos todas las filas anteriores.
+- Multiplicamos x * (bpp / 8) → Nos movemos dentro de la fila actual hasta la columna x.
+- Sumamos ambos valores → Obtenemos la posición exacta dentro de data donde está ese píxel.
+
+No hace falta que tengamos esto en mente todo el rato, vamos a hacer una función a la que, pasandole la posición x e y del píxel y su color, nos va a colcar dicho pixel en su posicion en el array:
+
+```c
+	void	ft_put_pixel_t(int x, int y, unsigned int color, t_game *game)
+	{
+		char	*dst;
+	
+		if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) // comprueba que el pixel esté dentro de la pantalla
+			return ;
+		dst = game->data + (y * game->size_line + x * (game->bpp / 8));
+		*(unsigned int *) dst = color;
+	}
+```
+### Ray casting
+
+Para que la explicación del raycasting sea mas accesible a personas que nunca han oido sobre el tema, vamos a empezar mostrando una vista cenital del mapa,
+
+yo para esto he creado una función simple para pintar un cuadrado pasandole la posicion, el tamaño y el color:
+
+```c
+	void draw_square(int x, int y, int size, int color, t_game *game)
+	{
+	    for(int i = 0; i < size; i++)
+	        put_pixel(x + i, y, color, game);
+	    for(int i = 0; i < size; i++)
+	        put_pixel(x, y + i, color, game);
+	    for(int i = 0; i < size; i++)
+	        put_pixel(x + size, y + i, color, game);
+	    for(int i = 0; i < size; i++)
+	        put_pixel(x + i, y + size, color, game);
+	}
+```
+
+Y ahora vas a elaborar una función, que lea la matriz de tu mapa y por cada `1`pinte un cuadrado de un color y  por cada `0` un cuadrado de otro color, yo he utilziado para los muros otra función de `draw_filled_square()` pero bueno, tampoco puedo dártelo todo hecho.
+
+esta función que pinta el mapa, llamemosla "draw_map" la vamos a llamar en cada iteracion del loop principal, junto con otra que pinte a nuestro player.
+la posición del jugador por ahora va a ser el centro de la pantalla así que en la estructura player, pondremos su posX y su posY en width / 2` y `height / 2` podemos simplemente utilizar la funcion draw_square en la posicion x e y del jugador
+
+el loop (muy simplificado) ya debería de ser algo así:
+
+```c
+int draw_loop(t_game *game)
+{
+    t_player *player = &game->player;
+
+    clear_image(game); // Limpiar
+
+    draw_square(player->x, player->y, 10, 0x00FF00, game); // pintar player
+    draw_map(game); // pintar mapa
+    
+    mlx_put_image_to_window(game->mlx, game->win, game->img, 0, 0);
+    return 0;
+}
+```
+vamos a iniciar nuestro juego, y después de quebrarte la cabeza arreglando muchas cosas que no he explicado o que posiblemente hayan salido mal (es el primer intento, no te preocupes) deberías de poder ver algo parecido a esto:
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/Captura%20desde%202025-09-02%2008-50-09.png?raw=true" alt="Captura de Cub3D" width="400"/>
+</p>
+
 

@@ -15,8 +15,8 @@
 ## 📜 Acerca del Proyecto
 
 ```html
-	🕹️ Cub3D es un proyecto donde aprenderás fundamentos de gráficos 3D mediante la creación de un motor gráfico simple
-   basado en raycasting, inspirado en clásicos como Wolfenstein 3D.
+	🕹️ Cub3D es un proyecto donde aprenderás fundamentos de gráficos 3D mediante la creación de un
+	motor gráfico simple basado en raycasting, inspirado en clásicos como Wolfenstein 3D.
 ```
 
 > [!NOTE]  

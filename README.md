@@ -229,6 +229,119 @@ ahora podemos añadir a nuestro loop una funcion de `move_player()` que va a rec
 el movimiento hacia arriba abajo y los lados es muy sencillo, vamos a crear una constante que será PLAYER_SPEED y dentro de la función de movimiento vamos a decir que "mientras player->key_up == true", player->posX += PLAYER_SPEED.
 hazlo así con todas las teclas que tienes guardadas como booleanos en tu estructura player, al incluir la función `move_player()` antes de las funciones de pintado, ya tendremos esa estructura "básica"; limpiar, calcular y pintar. después de investigar y solucionar posibles errores, ya deberías de tener algo como esto:
 
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/ezgif-88233df297ca3c.gif" alt="Captura de Cub3D" width="400"/>
+</p>
 
+Para que nuestro juego sea más jugable, nosotros manejamos con `WASD`la posición del jugador y con las flechas de dirección izquierda y derecha; hacia donde "mira" el jugador (movemos su angulo de visión).
+para esto necesitamos introducir los conceptos de seno y coseno, que como yo no soy matemático intentaré explicar de la forma menos errónea posible.
+
+nuestro player va a tener una nueva variable; `angle` esta define a groso modo, hacia donde mira el player
+
+es común definir la dirección en la que mira el jugador usando un ángulo en radianes.
+Normalmente, se toma el eje X positivo como referencia (mirar a la derecha), y a partir de ahí el ángulo aumenta en sentido antihorario:
+
+Derecha: 0 radianes (o 2π, es lo mismo)
+Arriba: π/2 radianes
+Izquierda: π radianes
+Abajo: 3π/2 radianes (o -π/2)
+
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/pi-angles.png" alt="Captura de Cub3D" width="400"/>
+</p>
+
+Básicamente, iniciaremos la variable `angle`en una de estas direcciones, dependiendo de hacia donde queremos que mire el player al inicio de la partida.
+
+```html
+Guarda una constante de PI en tu .h con unos 12 decimales, lo vamos a utilizar bastante
+```
+
+También vamos a necesitar una constante llamada ANGLE_SPEED, básicamente va a ser la velocidad a la que gira nuestro player, yo la he definido como 0.01, vamos a sumarle esta cantidad a angle, cada vez que detectemos que `player->arrow_left` o `player->arrow_right` son true, también es importante restear sus valores al dar una "vuelta completa":
+
+```c
+    if (player->arrow_left)
+        player->angle -= angle_speed;
+    if (player->arrow_right)
+        player->angle += angle_speed;
+    if (player->angle > 2 * PI) // si angle supera a 2 * PI, lo ponemos a 0 y viceversa
+        player->angle = 0;
+    if (player->angle < 0)
+        player->angle = 2 * PI;
+```
+
+El ángulo al que mira el player va a afectar directamente al movimiento del jugador con las teclas WASD, pues, ahora queremos que al pulsar la W, el player se mueva en la dirección que marca el ángulo de esta forma. es decir, ya no nos basta con sumar o restar PLAYER_SPEED a posX o posY, ahora hemos de tener en cuenta cual es la desviación tanto en X como en Y que provoca el ángulo. lo haremos de esta forma:
+
+¿Qué son seno y coseno en este contexto?
+Seno (sin) y coseno (cos) son funciones matemáticas que te dicen “cuánto te mueves en X” (horizontal) y “cuánto te mueves en Y” (vertical) cuando quieres avanzar en la dirección hacia donde está mirando el jugador.
+Imagina un círculo. El ángulo (player->angle) es hacia dónde mira la flecha/jugador.
+Coseno es el movimiento horizontal (X), seno es el movimiento vertical (Y).
+¿Para qué sirven aquí?
+Sirven para mover al jugador en la dirección que está mirando, no solo hacia arriba/abajo/izquierda/derecha fijos en la pantalla, sino hacia donde apunta la flecha.
+Por ejemplo: Si miras arriba a la derecha, avanzarás en diagonal solo pulsando`W`.
+
+para moverte hacia alante y atras, sumamos o restamos`Cos(angle)` para x y Sin(angle) para y, para el movimiento lateral se invierte y utilizamos Sin(angle) para x y Cos(angle) para y:
+
+```c
+    if (player->key_up)
+    {
+        player->x += cos_angle * PLAYER_SPEED;
+        player->y += sin_angle * PLAYER_SPEED;
+    }
+    if (player->key_down)
+    {
+        player->x -= cos_angle * PLAYER_SPEED;
+        player->y -= sin_angle * PLAYER_SPEED;
+    }
+    if (player->key_left)
+    {
+        player->x += sin_angle * PLAYER_SPEED;
+        player->y -= cos_angle * PLAYER_SPEED;
+    }
+    if (player->key_right)
+    {
+        player->x -= sin_angle * PLAYER_SPEED;
+        player->y += cos_angle * PLAYER_SPEED;
+    }
+```
+
+¿Sencillo verdad?, ahora vamos a castear nuestro primer rayo en la dirección que tenemos en angle, para hacer mas evidente todo lo que hemos implementado hasta el momento.
+
+```c
+void draw_line(t_player *player, t_game *game, float angle, int i)
+{
+    float cos_angle = cos(angle);
+    float sin_angle = sin(angle);
+    float ray_x = player->x;
+    float ray_y = player->y;
+
+    while(!touch(ray_x, ray_y, game))
+    {
+        put_pixel(ray_x, ray_y, 0xFF0000, game);
+        ray_x += cos_angle;
+        ray_y += sin_angle;
+    }
+}
+```
+Dibujar la línea es parecido a movernos, vamos a ir pintando píxeles en las posiciones ray_x e y, que van a ir incrementando en la dirección dada por seno y coseno del angulo pero en vez de depender de si pulsamos una tecla, lo vamos a hacer hasta que `touch() nos devuelva true, básicamente esta funcion va a comprobare si en las posiciones x,y de nuestra matriz hay un `1`,
+
+```c
+bool touch(float px, float py, t_game *game)
+{
+    int x = px / BLOCK;
+    int y = py / BLOCK;
+    if(game->map[y][x] == '1')
+        return true;
+    return false;
+}
+```
+
+presta atención a que hemos dividido px / BLOCK, ya que px hace referencia a la pantalla que puede ser en mi caso de 576x448, para tener la posición en la matriz, dividimos por el tamaño de nuestra celda (BLOCK) 576 / 64 = 9 y 448 / 64 = 7, es decir, nuestra matriz tendrá posiciones de 0 a 8 en horizontal y de 0 a 6 en vertical. a menudo vamos a necesitar convertir entre la x de la pantalla y la x de la matriz de esta forma.
+
+Una vez implementado esto, nuestro programa debería de verse así, con nuestro primer rayo casteado. A  partir de aquí todo toma un poco más de forma y lo vas a entender muy bien.
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/ezgif-76bd7f53bd990d.gif" alt="Captura de Cub3D" width="400"/>
+</p>
 
 

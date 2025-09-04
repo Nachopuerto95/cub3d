@@ -405,3 +405,15 @@ y si ahora lanzamos un rayo por cada píxel del ancho de nuestro juego (576px en
 <p align="center">
   <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/fullwidthrays.gif" alt="Captura de Cub3D" width="400"/>
 </p>
+
+### calcular distancia:
+
+Como puedes observar en el gif de arriba, hay un error cuando comprobamos las colisiones pixel a pixel llamado corner bug, que no reconoce la colisión entre dos celdas pegadas diagonalmente. por este motivo y por eficiencia, vamos a utilizar un algoritmo llamado DDA.
+
+este algoritmo utiliza la trigonometría para calcular en que pared choca nuestro rayo.
+
+mientras lo explicamos utilizaremos las siguientes variables:
+`side_dixt_x` y `side_dist_y`: la distancia entre el player y la próxima pared (del eje x o y ) con la que choca el rayo,
+`delta_dist_x` y `delta_dist_y`: la distancia que recorre el rayo entre una línea de un eje y otra del mismo eje, esta es constante:
+
+

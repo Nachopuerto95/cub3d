@@ -135,7 +135,7 @@ No hace falta que tengamos esto en mente todo el rato, vamos a hacer una funció
 		*(unsigned int *) dst = color;
 	}
 ```
-### Ray casting
+### Pintando mapa
 
 Para que la explicación del raycasting sea mas accesible a personas que nunca han oido sobre el tema, vamos a empezar mostrando una vista cenital del mapa,
 
@@ -181,5 +181,54 @@ vamos a iniciar nuestro juego, y después de quebrarte la cabeza arreglando much
 <p align="center">
   <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/Captura%20desde%202025-09-02%2008-50-09.png?raw=true" alt="Captura de Cub3D" width="400"/>
 </p>
+
+### movimiento del player
+
+Para que ese cuadradito pueda moverse vamos a hacer un par de funciones muy simples que ya hemos mencionado antes, key_press()` y `key_release()`, las cuales hemos pasado a los hooks del teclado.
+estas funciones no hacen otra cosa que cambiar una serie de booleans que vamos a incluir en nuestra estructura player, cada uno hará referencia a una tecla, de esta forma nuestra estructura guardará la información de que tecla esta presionada o no.
+
+cada vez que pulsamos una tecla, se activará nuestro hook, este generará un "keycode" que hace referencia al código correspondiente a la tecla que se ha pulsado y se lo pasará a la funcion que le hemos especificado
+
+```c
+mlx_hook(game.win, 2, 1L<<0, key_press, &game.player); // aquí el hook
+```
+
+```c
+int key_press(int keycode, t_player *player)
+{
+    if(keycode == W)
+        player->key_up = true;
+    if(keycode == S)
+        player->key_down = true;
+    if(keycode == A)
+        player->key_left = true;
+    if(keycode == D)
+        player->key_right = true;
+    if(keycode == LEFT)
+        player->left_rotate = true;
+    if(keycode == RIGHT)
+        player->right_rotate = true;
+    return 0;
+}
+```
+
+las constantes `W` `A` `S` `D`... las he guardado en mi archivo .h para no poner ahí los keycode, que son poco intuitivos. en mi caso los keycode son los siguientes:
+
+```c
+# define W 119
+# define A 97
+# define S 115
+# define D 100
+# define LEFT 65361
+# define RIGHT 65363
+```
+
+la función `key_release()` es igual, pero poniendo las variables a `false`
+
+ahora podemos añadir a nuestro loop una funcion de `move_player()` que va a recalcular en cada frame la posición del jugador.
+el movimiento hacia arriba abajo y los lados es muy sencillo, vamos a crear una constante que será PLAYER_SPEED y dentro de la función de movimiento vamos a decir que "mientras player->key_up == true", player->posX += PLAYER_SPEED.
+hazlo así con todas las teclas que tienes guardadas como booleanos en tu estructura player, al incluir la función `move_player()` antes de las funciones de pintado, ya tendremos esa estructura "básica"; limpiar, calcular y pintar. después de investigar y solucionar posibles errores, ya deberías de tener algo como esto:
+
+
 
 

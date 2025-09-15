@@ -412,9 +412,11 @@ Como puedes observar en el gif de arriba, hay un error cuando comprobamos las co
 
 este algoritmo utiliza la trigonometría para calcular en que pared choca nuestro rayo.
 
-mientras lo explicamos utilizaremos las siguientes variables:
-`side_dixt_x` y `side_dist_y`: la distancia entre el player y la próxima pared (del eje x o y ) con la que choca el rayo,
-`delta_dist_x` y `delta_dist_y`: la distancia que recorre el rayo entre una línea de un eje y otra del mismo eje, esta es constante:
+vamoz a analizar el recorido de la función draw line para saber que estamos haciendo en cada momento:
+
+primero iniciamos los primeros datos con `ft_init_line_data`
+- `ft_init_line` calculamos la direccion del rayo con `sen`y `cos`, calculamos la posicion relativa del player dentro del mapa y calculamos delta dist
+- `ft_get_delta_dist`: `delta_dist_x` y `delta_dist_y` son la distancia que recorre el rayo entre una línea de un eje y otra del mismo eje, esta es constante:
 
 We can get deltaDistX and deltaDistY using the following formulas:
 
@@ -437,4 +439,81 @@ deltaDistY = abs(|rayDir| / rayDirY)
 ```
 However, we can use 1 instead of |rayDir|, because only the ratio between deltaDistX and deltaDistY matters for the DDA code that follows later below
 
+```c
+float	ft_get_delta_dist(float rayDir)
+{
+	float	delta_dist;
 
+	if (fabs(rayDir) < 1e-8) // 1e-8 hace referencia a un numero muy pequeño
+	// sirve para decir que si el rayo es prácticamente paralelo, delta dist sera "infinito"
+		delta_dist = 1e30; // 1e30 se utiliza para un numero muy grande, lo mas parecido a infinito en este caso
+		// asi le decimos que como el rayo nunca va a chocar con ese eje, lo "descartamos"
+	else
+		delta_dist = fabs(1 / rayDir);
+	// si el rayo va exactamente a la derecha decimos que raydir_x es = 1, por eso 1 / 1 es = 1 y
+	// x debe de avanzar 1 para encontrar la siguiente linea,
+	return (delta_dist);
+}
+```
+una vez tenemos delta_dist, necesitamos saber en qué dirección avanzan los "steps" y cual es la side_dist inicial
+
+- `side_dist_x` y `side_dist_y`: la distancia entre el player y la próxima pared (del eje x o y ) con la que choca el rayo,
+
+```c
+void	ft_calculate_steps(t_line *l, t_player *player)
+{
+	if (l->ray_dir_x < 0)
+	{
+		l->step_x = -1;
+		l->side_dist_x = (player->x / BLOCK - l->map_x) * l->delta_dist_x;
+	}
+	else
+	{
+		l->step_x = 1;
+		l->side_dist_x = (l->map_x + 1.0 - player->x / BLOCK) * l->delta_dist_x;
+	}
+	if (l->ray_dir_y < 0)
+	{
+		l->step_y = -1;
+		l->side_dist_y = (player->y / BLOCK - l->map_y) * l->delta_dist_y;
+	}
+	else
+	{
+		l->step_y = 1;
+		l->side_dist_y = (l->map_y + 1.0 - player->y / BLOCK) * l->delta_dist_y;
+	}
+}
+```
+de esta forma calcularemos si los steps en cada eje avanzarán en +1 o -1, y cual es la distancia desde el player, que por lo general empezará en una parte intermedia de la celda, hasta el primer eje.
+
+una vez tenemos todos estos datos podemos aplicar el dda
+
+```c
+void	ft_dda(t_game *game, t_line *l)
+{
+	int	hit;
+
+	hit = 0;
+	while (hit == 0)
+	{
+		if (l->side_dist_x < l->side_dist_y)
+		{
+			l->side_dist_x += l->delta_dist_x;
+			l->map_x += l->step_x;
+			l->side = 0;
+		}
+		else
+		{
+			l->side_dist_y += l->delta_dist_y;
+			l->map_y += l->step_y;
+			l->side = 1;
+		}
+		if (game->map[l->map_y][l->map_x] == '1'
+			|| game->map[l->map_y][l->map_x] == 'C'
+			|| game->map[l->map_y][l->map_x] == 'D')
+			hit = 1;
+	}
+}
+```
+En cada paso, el rayo avanza a la siguiente línea de celdas (en X o Y) según cuál está más cerca mediante la suma de delta_dist. Cuando choca con una celda que es una pared ('1', 'C', 'D'), termina.
+3

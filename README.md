@@ -516,4 +516,11 @@ void	ft_dda(t_game *game, t_line *l)
 }
 ```
 En cada paso, el rayo avanza a la siguiente línea de celdas (en X o Y) según cuál está más cerca mediante la suma de delta_dist. Cuando choca con una celda que es una pared ('1', 'C', 'D'), termina.
-3
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/dda_sides.png" height="250"/>
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/dda_gif.gif" height="250"/>
+</p>
+
+te recomiendo que observes las variables de la imagen de la izquierda y el bucle que se representa en el gif de la derecha hasta que comprendas qué está pasando en cada momento.
+

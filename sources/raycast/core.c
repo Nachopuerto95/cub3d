@@ -1,0 +1,105 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   core.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jpuerto- <jpuerto-@student-42madrid.com    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/11 18:29:25 by loruzqui          #+#    #+#             */
+/*   Updated: 2025/09/15 08:52:59 by jpuerto-         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "../../includes/cub3d.h"
+
+void	ft_dda(t_game *game, t_line *l)
+{
+	int	hit;
+
+	hit = 0;
+	while (hit == 0)
+	{
+		if (l->side_dist_x < l->side_dist_y)
+		{
+			l->side_dist_x += l->delta_dist_x;
+			l->map_x += l->step_x;
+			l->side = 0;
+		}
+		else
+		{
+			l->side_dist_y += l->delta_dist_y;
+			l->map_y += l->step_y;
+			l->side = 1;
+		}
+		if (game->map[l->map_y][l->map_x] == '1'
+			|| game->map[l->map_y][l->map_x] == 'C'
+			|| game->map[l->map_y][l->map_x] == 'D')
+			hit = 1;
+	}
+}
+
+void	ft_calculate_steps(t_line *l, t_player *player)
+{
+	if (l->ray_dir_x < 0)
+	{
+		l->step_x = -1;
+		l->side_dist_x = (player->x / BLOCK - l->map_x) * l->delta_dist_x;
+	}
+	else
+	{
+		l->step_x = 1;
+		l->side_dist_x = (l->map_x + 1.0 - player->x / BLOCK) * l->delta_dist_x;
+	}
+	if (l->ray_dir_y < 0)
+	{
+		l->step_y = -1;
+		l->side_dist_y = (player->y / BLOCK - l->map_y) * l->delta_dist_y;
+	}
+	else
+	{
+		l->step_y = 1;
+		l->side_dist_y = (l->map_y + 1.0 - player->y / BLOCK) * l->delta_dist_y;
+	}
+}
+
+float	ft_get_dist(t_player *player, t_line l)
+{
+	float perp_wall_dist;
+
+	if (l.side == 0)
+		perp_wall_dist = (l.map_x - player->x / BLOCK + (1 - l.step_x) / 2) / l.ray_dir_x;
+	else
+		perp_wall_dist = (l.map_y - player->y / BLOCK + (1 - l.step_y) / 2) / l.ray_dir_y;
+
+	return perp_wall_dist * BLOCK;
+}
+
+int	ft_get_wall_c(int side, int step_x, int step_y)
+{
+	if (side == 0)
+	{
+		if (step_x < 0)
+			return (0);
+		else
+			return (1);
+	}
+	else
+	{
+		if (step_y < 0)
+			return (2);
+		else
+			return (3);
+	}
+}
+
+t_line	ft_init_line(t_player *player, float camera_x)
+{
+	t_line l;
+	l.ray_dir_x = player->dir_x + player->plane_x * camera_x;
+	l.ray_dir_y = player->dir_y + player->plane_y * camera_x;
+	l.map_x = (int)(player->x / BLOCK);
+	l.map_y = (int)(player->y / BLOCK);
+	l.delta_dist_x = ft_get_delta_dist(l.ray_dir_x);
+	l.delta_dist_y = ft_get_delta_dist(l.ray_dir_y);
+	return l;
+}

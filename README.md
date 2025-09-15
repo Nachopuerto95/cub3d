@@ -509,13 +509,14 @@ void	ft_dda(t_game *game, t_line *l)
 			l->side = 1;
 		}
 		if (game->map[l->map_y][l->map_x] == '1'
-			|| game->map[l->map_y][l->map_x] == 'C'
+			|| game->map[l->map_y][l->map_x] == 'C' // Son diferentes tipos de celdas que se consideran colisión
 			|| game->map[l->map_y][l->map_x] == 'D')
 			hit = 1;
 	}
 }
 ```
 En cada paso, el rayo avanza a la siguiente línea de celdas (en X o Y) según cuál está más cerca mediante la suma de delta_dist. Cuando choca con una celda que es una pared ('1', 'C', 'D'), termina.
+además, guardaremos si side es 0 (ha golpeado el eje x) o 1 (ha golpeado el eje Y).
 
 <p align="center">
   <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/dda_sides.png" height="250"/>
@@ -523,4 +524,92 @@ En cada paso, el rayo avanza a la siguiente línea de celdas (en X o Y) según c
 </p>
 
 te recomiendo que observes las variables de la imagen de la izquierda y el bucle que se representa en el gif de la derecha hasta que comprendas qué está pasando en cada momento.
+
+una vez hemos hecho el algoritmo, podemos calcular la distancia con `ft_get_dist()`
+
+```c
+float	ft_get_dist(t_player *player, t_line l, float start_x)
+{
+	float	hit_x;
+	float	hit_y;
+	float	perp_wall_dist;
+	float	dist;
+
+	if (l.side == 0)
+	{
+		perp_wall_dist = (l.map_x - player->x / BLOCK + (1 - l.step_x) / 2)
+			/ l.ray_dir_x;
+		hit_y = player->y + perp_wall_dist * l.ray_dir_y * BLOCK;
+		hit_x = l.map_x * BLOCK;
+		if (l.step_x < 0)
+			hit_x += BLOCK;
+	}
+	else
+	{
+		perp_wall_dist = (l.map_y - player->y / BLOCK + (1 - l.step_y) / 2)
+			/ l.ray_dir_y;
+		hit_x = player->x + perp_wall_dist * l.ray_dir_x * BLOCK;
+		hit_y = l.map_y * BLOCK;
+		if (l.step_y < 0)
+			hit_y += BLOCK;
+	}
+	dist = sqrt(pow(hit_x - player->x, 2) + pow(hit_y - player->y, 2));
+	return (dist * cos(start_x - player->angle));
+}
+```
+
+Paso a paso
+
+1. Determinar el tipo de impacto
+El rayo puede chocar en una pared vertical (side == 0) o horizontal (side == 1).
+Dependiendo de esto, cambiamos las fórmulas.
+
+2. Calcular la distancia perpendicular a la pared (perp_wall_dist)
+Esto calcula cuán lejos está la pared del jugador, pero midiendo la distancia de manera perpendicular, para evitar distorsiones.
+
+Si el impacto es en una pared vertical (side == 0):
+```c
+perp_wall_dist = (l.map_x - player->x / BLOCK + (1 - l.step_x) / 2) / l.ray_dir_x;
+```
+l.map_x es la celda donde chocó el rayo en X.
+player->x / BLOCK es la posición del jugador en el mapa.
+(1 - l.step_x) / 2 ajusta el cálculo dependiendo de la dirección en que se movía el rayo (izquierda o derecha).
+Se divide por la dirección del rayo en X (l.ray_dir_x) para saber cuántas "unidades" hay que recorrer.
+
+3. Calcular el punto exacto de impacto (hit_x, hit_y)
+Dependiendo del eje en el que impactó, calculamos las coordenadas de la colisión:
+
+Si fue una pared vertical:
+```c
+hit_x = l.map_x * BLOCK // (posición de la pared en X)
+hit_y = player->y + perp_wall_dist * l.ray_dir_y * BLOCK // (posición calculada en Y)
+```
+
+Si el rayo iba hacia la izquierda (l.step_x < 0), sumamos un bloque para estar en el borde correcto.
+
+4. Calcular la distancia real entre el jugador y el punto de impacto
+
+```c
+dist = sqrt(pow(hit_x - player->x, 2) + pow(hit_y - player->y, 2));
+```
+
+Usamos el Teorema de Pitágoras para obtener la distancia entre dos puntos (x1, y1) y (x2, y2).
+
+por último, explicaré la parte en la que prep_wall... calcula la distancia perpendicular,
+
+Con esta fórmula que no deja de ser un teorema de pitágoras vamos a arreglar el efecto ojo de pez, ¿Por qué ocurre este efecto? pues muy sencillo, nosotros estamos calculando la distancia del rayo desde un punto y no desde un plano, pero luego lo representaremos que si es un plano,
+echa un ojo a esta imagen y lo entenderás mejor:
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/raycastperpwalldist2%20(1).png" height="250"/>
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/1RAY_CORRECTION.png" height="250"/>
+</p>
+
+si observas la imagen de la derecha, verás que cuando estamos viendo una pared de frente, que debería verse recta, la distancia hacia las esquinas es mucho mayor que la distancia en el centro, por eso debemos de utilizar el `camera plane`que será igual a nuestra constante WIDTH, es decir, el ancho de nuestra pantalla y calcular la distancia perpendicular a dicho plano, de esta manera todas las distancias son iguales.
+
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/0RAY_CORRECTION.png" alt="Captura de Cub3D" width="400"/>
+</p>
+
 

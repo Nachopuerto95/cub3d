@@ -570,9 +570,224 @@ una vez tenemos la distancia, en `ft_init_line_data()` completamos los datos de 
 		d->end = HEIGHT;
 ```
 
-siendo SCALE_BLOCK una constante que utilizamos para varias el tamaño de la pared,
+siendo SCALE_BLOCK una constante que utilizamos para variar el tamaño de la pared,
 start y end será donde empezamos a dibujar la linea vertical, básicamente hacemos el calculo para que se centre horizontalmente
 
+### Añadir texturas
 
+vamos a ver nuestra función de `draw_line()` aquí ocurren varias cosas.
+
+```c
+void	ft_draw_line(t_player *player, t_game *game, float start_x, int i)
+{
+	t_draw_data	d;
+
+	ft_init_line_data(&d, player, game, start_x);
+	ft_calc_wall_position(&d, player);
+	ft_calc_texture_data(&d, game);
+	ft_draw_wall_column(&d, game, i);
+}
+```
+
+como ya he dicho antes, esta función va a pintar una línea vertical, habrá tantas lineas como píxeles de ancho tenga nuestro canvas, esta línea se compone de las variables que hemos rellenado en `init_line_data()` 
+desde y = 0 hasta y = start_y pintamos del color del techo
+
+desde start_y hasta end pintaremos la línea de la textura correspondiente, como hemos usado BLOCK = 64 y nuestra textura es también de 64 px, tenemos que averiguar en que punto exacto golpeó nuestro rayo para pintar esa linea, además la pintaremos con el `height` que hemos sacado a traves de la `dist recorrida por el rayo, esto afecta directamente al renderizado de la textura 
+
+por último tenemos el color del suelo que irá desde `end` hasta `y = HEIGHT`
+
+```c
+void	ft_calc_wall_position(t_draw_data *d, t_player *player)
+{
+	if (d->l.side == 0)
+		d->wall_x = player->y + d->l.dist * d->l.ray_dir_y;
+	else
+		d->wall_x = player->x + d->l.dist * d->l.ray_dir_x;
+	d->wall_x = d->wall_x - floor(d->wall_x / BLOCK) * BLOCK;
+	d->tex_x_normalized = d->wall_x / BLOCK;
+	d->tex_index = ft_get_wall_c(d->l.side, d->l.step_x, d->l.step_y);
+}
+```
+
+Si el rayo golpeó una pared vertical (side == 0), calculamos el punto exacto de colisión usando la posición Y del jugador y el componente Y del rayo.
+Si golpeó una pared horizontal (side == 1), usamos la posición X del jugador y el componente X del rayo.
+d->l.dist es la distancia desde el jugador hasta la pared.
+d->l.ray_dir_x y d->l.ray_dir_y indican la dirección del rayo.
+
+Ejemplo Numérico
+Supón:
+
+El jugador está en player->y = 100.
+El rayo va hacia arriba, así que d->l.ray_dir_y = 1.0.
+La distancia a la pared (d->l.dist) es 32.
+Entonces:
+
+```c
+d->wall_x = 100 + 32 * 1.0;  // resultado: 132
+```
+
+```c
+d->wall_x = d->wall_x - floor(d->wall_x / BLOCK) * BLOCK;
+```
+Aquí calculas la posición exacta del impacto dentro del bloque de la pared.
+
+Por ejemplo, si tu bloque mide 64 píxeles (BLOCK=64) y el impacto fue en x=130, entonces:
+floor(130 / 64) = 2
+2 * 64 = 128
+130 - 128 = 2
+Así, wall_x te da el desplazamiento dentro del bloque, que irá de 0 a 63.
+
+de igual manera, para que podamos utilizar texturas que no siempre coincidan con BLOCK, vamos a normalizar el punto, convirtiendolo en un valor de 0 a 1 de tal manera que si golpea en `x=32` tex_x_normalized será 0.5
+después vamos a ver cual de las 4 caras hay que renderizar con `ft_get_wall_c()`, esta funcion devolverá un int que será el index correspondiente a la textura dentro de nuestro array de texturas
+
+la siguiente funcion que viene es esta
+
+```c
+void	ft_calc_texture_data(t_draw_data *d, t_game *game)
+{
+	d->tex_x = (int)(d->tex_x_normalized * game->textures[d->tex_index].width);
+	d->step = 1.0 * game->textures[d->tex_index].height / d->height;
+	d->tex_pos = (d->start_y - HEIGHT / 2 + d->height / 2) * d->step;
+	d->y = d->start_y;
+}
+```
+por pasos, aquí vamos a convertir esa cifra normalizada  a un punto en el ancho total de la textura
+```c
+d->tex_x = (int)(d->tex_x_normalized * game->textures[d->tex_index].width);
+``
+El "step" indica cuántos píxeles de la textura debes saltar cada vez que pintas un píxel de la pared en la pantalla.
+Si la pared se dibuja más alta que la textura, step < 1 (la textura se estira). Si se dibuja más baja, step > 1 (la textura se comprime).
+
+```c
+d->step = 1.0 * game->textures[d->tex_index].height / d->height;
+```
+
+Calcular la posición inicial en la textura
+C
+d->tex_pos = (d->start_y - HEIGHT / 2 + d->height / 2) * d->step;
+d->start_y es el primer píxel vertical donde empieza la pared en la pantalla.
+HEIGHT / 2 es el centro vertical de la ventana/pantalla.
+d->height / 2 es la mitad de la altura de la pared.
+Esta fórmula ajusta la posición inicial (en la textura) para que el mapeo de la textura quede centrado con respecto a la pared dibujada.
+Multiplicando por d->step conviertes la posición en pantalla a la posición correspondiente en la textura.
+
+Por último vamos a pintar la textura
+
+```c
+void	ft_draw_wall_column(t_draw_data *d, t_game *game, int i)
+{
+	while (d->y < d->end)
+	{
+		d->tex_y = (int)d->tex_pos % game->textures[d->tex_index].height;
+		if (d->tex_y < 0)
+			d->tex_y += game->textures[d->tex_index].height;
+		d->tex_pos += d->step;
+		d->pixel_addr = game->textures[d->tex_index].addr
+			+ (d->tex_y * game->textures[d->tex_index].size_line
+				+ d->tex_x * (game->textures[d->tex_index].bpp / 8));
+		d->color = *(unsigned int *)d->pixel_addr;
+		if (d->l.side == 0 && !ft_is_light(d->color))
+			d->color = (d->color >> 1) & 8355711;
+		d->color = ft_get_darkness(d->color, d->height);
+		ft_put_pixel_t(i, d->y, d->color, game);
+		d->y++;
+	}
+}
+```
+
+hay un punto importante a explicar en el como se pinta la textura y como se hace para comprimirla o expandirla dependiendo de la distancia a la pared.
+en el eje x, por ejemplo, si nos situaramos frente a una pared de forma que esta ocupe los 800px del ancho de la pantalla, cada rayo ha golpeado en un px de la pantalla pero también hemos calculado un punto relativo a BLOCK es decir, en nuestro caso de 0 a 64, como 800 / 64 es = a 12,5, eso quiere decir que todos los rayos de la pantalla desde el 0 hasta el 12 van a renderizar la primera columna de la textura.
+para el eje y, como ya hemos explicado se utiliza la variable step, de tal forma que si este es < 0, "repetiremos" píxeles y si es mayor nos los saltaremos
+
+2. Seleccionar la coordenada Y de la textura
+C
+d->tex_y = (int)d->tex_pos % game->textures[d->tex_index].height;
+if (d->tex_y < 0)
+	d->tex_y += game->textures[d->tex_index].height;
+d->tex_pos es la posición actual (puede tener decimales) en la textura vertical, calculada previamente.
+Se convierte a entero para obtener el píxel exacto (tex_y) de la textura a usar.
+El módulo (%) asegura que no te sales de la textura aunque haya algún error de cálculo.
+Si tex_y sale negativo, lo corriges para mantenerlo dentro de la textura.
+3. Avanzar en la textura vertical
+C
+d->tex_pos += d->step;
+d->step es cuánto debes avanzar en la textura por cada píxel de pantalla que pintas.
+Así, la textura se estira o comprime para ajustarse a la altura de la pared en la pantalla.
+4. Calcular la dirección del píxel en la textura
+esto funciona igual que al guardar los pixeles en game_addr, teniendo el line_size y los bpp nos situamos sobre el espacio de memoria exacto de ese pixel
+
+C
+d->pixel_addr = game->textures[d->tex_index].addr
+	+ (d->tex_y * game->textures[d->tex_index].size_line
+		+ d->tex_x * (game->textures[d->tex_index].bpp / 8));
+
+  
+vamos a leer el valor RGBA (o RGB) del píxel de la textura.
+d->color = *(unsigned int *)d->pixel_addr;
+
+
+### shading
+
+Oscurecer el color si es una pared vertical
+C
+if (d->l.side == 0 && !ft_is_light(d->color))
+	d->color = (d->color >> 1) & 8355711;
+
+en mi caso, para crear un efecto, he elegido que las paredes oeste tendran como una "Luz" y las paredes este serán una textura con un ligero matiz del color de esta luz para falsear el reflejo de la iluminación
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/shading01.png" alt="Captura de Cub3D" width="400"/>
+</p>
+
+puedes ver como al oscurecer las paredes verticales y hacer este efecto en las horizontales, tenemos mayor sensación de profundidad. para favorecer aun más este efecto, podemos añadir un factor que añada una cantidad de negro a cada pixel en función de la distancia de la pared o lo que es igual, en funcion al height
+
+```c
+unsigned int	ft_get_darkness(unsigned int color, float height)
+{
+	float			darkness;
+	unsigned int	r;
+	unsigned int	g;
+	unsigned int	b;
+
+	darkness = ((float)height * 0.9) / ((float)HEIGHT * 0.7f); // ajustamos los valores máximo y minimo
+	if (darkness > 1.0f) // ajustamos que no pase de 1 o 0,
+		darkness = 1.0f;
+	if (darkness < 0.01f)
+		darkness = 0.00f;
+	if (ft_is_light(color)) // si es un color luz, no lo tocaremos
+		return (color);
+	r = ((color >> 16) & 0xFF) * darkness; // multiplicamos cada canal por el factor de oscuridad
+	g = ((color >> 8) & 0xFF) * darkness;
+	b = (color & 0xFF) * darkness;
+	return ((r << 16) | (g << 8) | b); // devolvemos el color
+}
+```
+yo he elegido excepciones de colores para que no se oscurezcan, de forma que den la sensación de ser una luz
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/shading02.png" alt="Captura de Cub3D" width="400"/>
+</p>
+
+```c
+bool	ft_is_light(unsigned int color)
+{
+	if (color == LIGHT_COLOR_1 || color == LIGHT_COLOR_2
+		|| color == 0x00FF00)
+		return (true);
+	return (false);
+}
+```
+
+si ahora añadiéramos textura al suelo y techo, obtendríamos este resultado final:
+
+<p align="center">
+  <img src="https://github.com/Nachopuerto95/cub3d/blob/main/img/finalgifbonus.gif" alt="Captura de Cub3D"/>
+</p>
+
+### aviso
+
+Esto no pretende ser una guía paso a paso, más bien un apoyo para entender algunas fórmulas matemáticas y ver los principales problemas ocn los que me he ido topando a la hora de realizar el proyecto. es un buen apoyo para ir investigando y probando por tu cuenta, no hagas todo igual que yo, te invito a que hagas tus pruebas, implementes tus propias cosas y disfrutes con este proyecto tanto como yo
+
+Muchas gracias por leer, puedes dejar una estrella o un follow si el contenido te ha parecido bueno
 
 

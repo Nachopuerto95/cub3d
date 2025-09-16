@@ -15,8 +15,6 @@
 
 ---
 
----
-
 > [!WARNING]
 > **This guide is an educational aid for understanding the 42 Cub3D project. It is NOT intended as a step-by-step guide or the only way to tackle the project.**
 >  

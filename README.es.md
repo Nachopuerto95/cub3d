@@ -8,18 +8,18 @@
  </a>
 </p>
 
+
+
+# Cub3D (42cursus)
+
+<img src="https://github.com/Nachopuerto95/multilang/blob/main/42-Madrid%20-%20Edited.jpg">
+
 ---
 
 > [!WARNING]
 > **Esta guía es un apoyo didáctico para comprender el proyecto Cub3D de 42. NO pretende ser una guía paso a paso ni la única forma de abordar el proyecto.**
 >  
 > Si quieres ir directo al mensaje final, [haz clic aquí](#agradecimientos-y-aviso-final).
-
----
-
-# Cub3D (42cursus)
-
-<img src="https://github.com/Nachopuerto95/multilang/blob/main/42-Madrid%20-%20Edited.jpg">
 
 ---
 
